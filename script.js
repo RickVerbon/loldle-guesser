@@ -6,7 +6,8 @@ function updateChampionList() {
     const resourceFilter = $('#resourceFilter').val() || [];
     const rangeFilter = $('#rangeFilter').val() || [];
     const regionFilter = $('#regionFilter').val() || [];
-    const releaseDateFilter = $('#releaseDateFilter').val() || [];
+    const releaseDateFilterStart = $('#releaseDateFilterStart').val() || 0;
+    const releaseDateFilterEnd = $('#releaseDateFilterEnd').val() || Infinity;
 
     // Fetch and filter data from data.json
     $.getJSON('data.json', function(championsData) {
@@ -18,21 +19,7 @@ function updateChampionList() {
                    (resourceFilter.length === 0 || resourceFilter.includes(champion.Resource)) &&
                    (rangeFilter.length === 0 || rangeFilter.includes(champion.Range)) &&
                    (regionFilter.length === 0 || regionFilter.includes(champion.Region)) &&
-                   (releaseDateFilter.length === 0 ||
-                    releaseDateFilter.some(yearFilter => {
-                        const [condition, inputYear] = yearFilter.split(' ');
-                        const targetYear = parseInt(inputYear);
-
-                        if (condition === 'Before') {
-                            return championYear < targetYear;
-                        } else if (condition === 'After') {
-                            return championYear > targetYear;
-                        } else if (condition === 'Between') {
-                            const [startYear, endYear] = inputYear.split('-').map(Number);
-                            return championYear >= startYear && championYear <= endYear;
-                        }
-                        return false;
-                    }));
+                   (championYear >= releaseDateFilterStart && championYear <= releaseDateFilterEnd);
         });
 
         // Display the filtered champions
@@ -53,7 +40,7 @@ function populateMultiSelectFilter(filterId, options, withCheckboxes = false) {
         options.sort(); // Sort options alphabetically
 
         options.forEach(option => {
-            const optionElement = $('<option>').attr('value', option).text(option).prop('selected', false);
+            const optionElement = $('<option>').attr('value', option).text(option);
             filter.append(optionElement);
         });
     } else {
@@ -70,7 +57,7 @@ function populateMultiSelectFilter(filterId, options, withCheckboxes = false) {
 }
 
 // Event listeners for filter changes
-$('#genderFilter, #positionsFilter, #speciesFilter, #resourceFilter, #rangeFilter, #regionFilter, #releaseDateFilter').change(updateChampionList);
+$('#genderFilter, #positionsFilter, #speciesFilter, #resourceFilter, #rangeFilter, #regionFilter, #releaseDateFilterStart, #releaseDateFilterEnd').change(updateChampionList);
 
 // Initial setup
 // Fetch and populate options from data.json
@@ -94,8 +81,11 @@ $.getJSON('data.json', function(championsData) {
     populateMultiSelectFilter('#regionFilter', uniqueRegion, true);
 
     const uniqueReleaseYears = [...new Set(championsData.map(champion => new Date(champion["Release Date"]).getFullYear()))];
-    const releaseFilterOptions = uniqueReleaseYears.map(year => [`Before ${year}`, `After ${year}`, `Between ${year}-${year + 1}`]).flat();
-    populateMultiSelectFilter('#releaseDateFilter', releaseFilterOptions, true);
+    const releaseFilterOptions = uniqueReleaseYears.sort().map(year => `${year}`);
+    
+    // Populate the release date filter options
+    populateMultiSelectFilter('#releaseDateFilterStart', releaseFilterOptions, false);
+    populateMultiSelectFilter('#releaseDateFilterEnd', releaseFilterOptions, false);
 
     // Trigger initial update
     updateChampionList();
